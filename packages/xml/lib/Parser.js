@@ -2,6 +2,7 @@ import LtxParser from "ltx/lib/parsers/ltx.js";
 import Element from "ltx/lib/Element.js";
 import { EventEmitter } from "@xmpp/events";
 import XMLError from "./XMLError.js";
+import { sanitizeText } from "./util/sanitization.js";
 
 class Parser extends EventEmitter {
   constructor() {
@@ -14,7 +15,20 @@ class Parser extends EventEmitter {
     parser.on("endElement", this.onEndElement.bind(this));
     parser.on("text", this.onText.bind(this));
 
+    parser.on("error", this.onError.bind(this))
+
     this.parser = parser;
+  }
+
+  onError(error) {
+    if (error instanceof XMLError) {
+      console.warn("Caught an XML Error", error.message);
+      const sanitizedMessage = sanitizeText(err.message);
+
+      this.emit('error', new XMLError(`Error occurred during parsing, but we sanitized it: ${sanitizedMessage}`));
+    } else {
+      this.emit("error", error);
+    }
   }
 
   onStartElement(name, attrs) {
@@ -53,16 +67,18 @@ class Parser extends EventEmitter {
     }
 
     this.cursor = cursor.parent;
-  }
+  } s
 
   onText(str) {
     const { cursor } = this;
+
     if (!cursor) {
       this.emit("error", new XMLError(`${str} must be a child.`));
       return;
     }
 
-    cursor.t(str);
+    const sanitizedText = sanitizeText(str);
+    cursor.t(sanitizedText);
   }
 
   write(data) {
